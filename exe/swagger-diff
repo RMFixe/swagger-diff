@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'swagger/diff'
+require 'json/ext'
 
 options = {}
 OptionParser.new do |opts|
@@ -19,6 +20,11 @@ OptionParser.new do |opts|
           'list of incompatibilities will be printed.') do |i|
     options[:incompatibilities] = i
   end
+  
+  opts.on('-j', '--json',
+          'Generate result in JSON format') do |j|
+    options[:jsonformat] = j
+  end
 
   opts.on_tail('-h', '--help', 'This message') do
     puts opts
@@ -34,16 +40,29 @@ OptionParser.new do |opts|
 end.parse!
 
 if ARGV.length == 2
-  diff = Swagger::Diff::Diff.new(ARGV[0], ARGV[1])
-
-  if options[:changes]
-    puts diff.changes_message
-  else
-    unless diff.compatible?
-      puts diff.incompatibilities_message
-      exit 1
+  begin
+    diff = Swagger::Diff::Diff.new(ARGV[0], ARGV[1])
+    if options[:changes]
+      if options[:jsonformat]
+        puts diff.changes.to_json
+      else
+        puts diff.changes_message
+      end
+    else
+      unless diff.compatible?
+        if options[:jsonformat]
+          puts diff.incompatibilities.to_json
+        else
+          puts diff.incompatibilities_message
+        end
+      else
+        puts "Check backward compatibility OK"
+      end
     end
+  rescue Exception => e
+    puts "Check backward compatibility failed : " + e.message
   end
+  
 else
   puts options[:help]
 end
