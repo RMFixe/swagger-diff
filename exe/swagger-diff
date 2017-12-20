@@ -39,9 +39,16 @@ OptionParser.new do |opts|
   options[:help] = opts
 end.parse!
 
-if ARGV.length == 2
+if ARGV.length == 2 
   begin
-    diff = Swagger::Diff::Diff.new(ARGV[0], ARGV[1])
+    begin
+      retries ||= 1
+      puts "Attempt check N°#{ retries }"
+      diff = Swagger::Diff::Diff.new(ARGV[0], ARGV[1])
+    rescue Exception => e
+      retry if (retries += 1) < 6
+      raise e
+    end
     if options[:changes]
       if options[:jsonformat]
         puts diff.changes.to_json
